@@ -1,11 +1,11 @@
 # Docker Webview
 
-Local web UI for inspecting running Docker containers and tailing logs from the selected container.
+Local web UI for inspecting Docker containers and tailing logs from the selected container.
 
 ## Features
 
-- Lists running and stopped containers, with running containers first
-- Filters the running list by image name substring
+- Lists containers in separate `Running` and `Stopped` tabs
+- Filters both tabs by image name substring
 - Streams a recent log backlog plus live updates for running containers
 - Shows saved Docker logs for stopped containers, including containers opened after they already stopped
 - Preserves the last viewed logs when the selected container stops
@@ -85,5 +85,5 @@ http://YOUR_SERVER_IP:3001
 
 - The backend currently talks to Docker through the hard-coded default socket path `/var/run/docker.sock`.
 - The backend default bind host is `127.0.0.1`, unless overridden with `HOST`.
-- The frontend filter matches image names, not container names.
+- The frontend filter matches image names, not container names, across both tabs.
 - Removing a stopped container from the sidebar only clears it from the UI; it does not delete anything in Docker.

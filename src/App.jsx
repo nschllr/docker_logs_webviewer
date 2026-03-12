@@ -32,6 +32,7 @@ function App() {
   const [streamError, setStreamError] = useState("");
   const [lastUpdated, setLastUpdated] = useState("");
   const logViewportRef = useRef(null);
+  const activeTabRef = useRef("running");
   const selectedIdRef = useRef("");
   const lastSelectedRunningContainerRef = useRef(null);
   const shouldAutoScrollRef = useRef(true);
@@ -67,6 +68,7 @@ function App() {
       status: "Stopped",
       state: "exited"
     });
+    setActiveTab("stopped");
     setStreamState("stopped");
     setStreamError("");
   }
@@ -104,6 +106,10 @@ function App() {
   }
 
   useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
 
@@ -112,17 +118,6 @@ function App() {
       lastSelectedRunningContainerRef.current = selectedListedContainer;
     }
   }, [selectedListedContainer]);
-
-  useEffect(() => {
-    if (selectedListedContainer) {
-      setActiveTab(selectedListedContainer.state === "running" ? "running" : "stopped");
-      return;
-    }
-
-    if (selectedPinnedContainer) {
-      setActiveTab("stopped");
-    }
-  }, [selectedListedContainer, selectedPinnedContainer]);
 
   useEffect(() => {
     let disposed = false;
@@ -146,8 +141,22 @@ function App() {
         setContainers(nextContainers);
         setContainersError("");
         setLastUpdated(new Date().toISOString());
+        const currentSelectedId = selectedIdRef.current;
+        const currentSelectedContainer = currentSelectedId
+          ? nextContainers.find((container) => container.id === currentSelectedId) || null
+          : null;
+
+        if (!currentSelectedId && nextContainers.length > 0 && !nextContainers.some((container) => container.state === "running")) {
+          setActiveTab("stopped");
+        } else if (
+          currentSelectedContainer &&
+          currentSelectedContainer.state !== "running" &&
+          activeTabRef.current !== "stopped"
+        ) {
+          setActiveTab("stopped");
+        }
+
         setPinnedStoppedContainer((currentPinned) => {
-          const currentSelectedId = selectedIdRef.current;
           if (currentPinned?.id && nextContainers.some((container) => container.id === currentPinned.id)) {
             return null;
           }
