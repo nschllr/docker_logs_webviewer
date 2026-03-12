@@ -388,9 +388,11 @@ function App() {
             </div>
           ) : (
             logs.map((entry, index) => (
-              <div key={`${entry.timestamp || "no-ts"}-${index}`} className={`log-line ${entry.stream}`}>
-                <span className="log-timestamp">{entry.timestamp || "--"}</span>
-                <span className="log-stream">{entry.stream}</span>
+              <div
+                key={`${entry.timestamp || "no-ts"}-${index}`}
+                className={`log-line ${entry.stream}`}
+                title={[entry.timestamp, entry.stream].filter(Boolean).join(" ")}
+              >
                 <code>{entry.message}</code>
               </div>
             ))
