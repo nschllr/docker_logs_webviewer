@@ -50,20 +50,36 @@ export function normalizeContainerSummary(container) {
   };
 }
 
-export async function listRunningContainers() {
-  const filters = encodeURIComponent(JSON.stringify({ status: ["running"] }));
-  const containers = await dockerJson(`/containers/json?filters=${filters}`);
-  return containers.map(normalizeContainerSummary);
+export async function listContainers() {
+  const containers = await dockerJson("/containers/json?all=1");
+
+  return containers
+    .map(normalizeContainerSummary)
+    .sort((left, right) => {
+      if (left.state === right.state) {
+        return right.createdAt.localeCompare(left.createdAt);
+      }
+
+      if (left.state === "running") {
+        return -1;
+      }
+
+      if (right.state === "running") {
+        return 1;
+      }
+
+      return right.createdAt.localeCompare(left.createdAt);
+    });
 }
 
 export async function inspectContainer(containerId) {
   return dockerJson(`/containers/${encodeURIComponent(containerId)}/json`);
 }
 
-export async function openContainerLogs(containerId, { tail = 200, signal } = {}) {
+export async function openContainerLogs(containerId, { tail = 200, follow = true, signal } = {}) {
   const tailValue = Number.isFinite(tail) ? Math.max(1, Math.min(5000, tail)) : 200;
   const path =
-    `/containers/${encodeURIComponent(containerId)}/logs?stdout=1&stderr=1&follow=1&tail=${tailValue}&timestamps=1`;
+    `/containers/${encodeURIComponent(containerId)}/logs?stdout=1&stderr=1&follow=${follow ? 1 : 0}&tail=${tailValue}&timestamps=1`;
   const response = await dockerRequest(path, { signal });
 
   if (response.statusCode < 200 || response.statusCode >= 300) {

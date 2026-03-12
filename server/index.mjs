@@ -3,7 +3,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { inspectContainer, listRunningContainers, openContainerLogs } from "./docker-api.mjs";
+import { inspectContainer, listContainers, openContainerLogs } from "./docker-api.mjs";
 import { createDockerLogDecoder, createLineEmitter } from "./log-stream.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -35,11 +35,11 @@ function writeSse(response, { event, data }) {
 
 async function handleContainers(_request, response) {
   try {
-    const containers = await listRunningContainers();
+    const containers = await listContainers();
     sendJson(response, 200, containers);
   } catch (error) {
     sendJson(response, 500, {
-      message: "Failed to query Docker for running containers.",
+      message: "Failed to query Docker for containers.",
       detail: error.message
     });
   }
@@ -59,24 +59,18 @@ async function handleContainerLogs(request, response, containerId) {
 
   try {
     const inspection = await inspectContainer(containerId);
-    if (inspection.State?.Running !== true) {
-      writeSse(response, {
-        event: "error-message",
-        data: { message: "The selected container is not currently running." }
-      });
-      response.end();
-      return;
-    }
+    const isRunning = inspection.State?.Running === true;
 
     const tail = Number(new URL(request.url, "http://localhost").searchParams.get("tail")) || 200;
     const logResponse = await openContainerLogs(containerId, {
       tail,
+      follow: isRunning,
       signal: controller.signal
     });
 
     writeSse(response, {
       event: "ready",
-      data: { containerId }
+      data: { containerId, running: isRunning }
     });
 
     const lineEmitter = createLineEmitter((line) => {

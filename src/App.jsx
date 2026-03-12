@@ -23,6 +23,7 @@ function App() {
   const [containers, setContainers] = useState([]);
   const [containersLoading, setContainersLoading] = useState(true);
   const [containersError, setContainersError] = useState("");
+  const [activeTab, setActiveTab] = useState("running");
   const [filterText, setFilterText] = useState("");
   const [pinnedStoppedContainer, setPinnedStoppedContainer] = useState(null);
   const [selectedId, setSelectedId] = useState("");
@@ -34,16 +35,19 @@ function App() {
   const selectedIdRef = useRef("");
   const lastSelectedRunningContainerRef = useRef(null);
   const shouldAutoScrollRef = useRef(true);
+  const activeLogContainerRef = useRef("");
 
   const normalizedFilter = filterText.trim().toLowerCase();
   const visibleContainers = containers.filter((container) =>
     container.image.toLowerCase().includes(normalizedFilter)
   );
-  const selectedRunningContainer = containers.find((container) => container.id === selectedId) || null;
+  const runningContainers = visibleContainers.filter((container) => container.state === "running");
+  const stoppedContainers = visibleContainers.filter((container) => container.state !== "running");
+  const selectedListedContainer = containers.find((container) => container.id === selectedId) || null;
   const selectedPinnedContainer =
-    pinnedStoppedContainer?.id === selectedId ? pinnedStoppedContainer : null;
-  const selectedContainer = selectedRunningContainer || selectedPinnedContainer || null;
-  const isSelectedRunning = Boolean(selectedRunningContainer);
+    !selectedListedContainer && pinnedStoppedContainer?.id === selectedId ? pinnedStoppedContainer : null;
+  const selectedContainer = selectedListedContainer || selectedPinnedContainer || null;
+  const isSelectedRunning = selectedContainer?.state === "running";
   const isSelectedPinned = Boolean(selectedPinnedContainer);
 
   function isNearBottom(node) {
@@ -68,12 +72,17 @@ function App() {
   }
 
   function handleSelectContainer(containerId) {
+    const container = containers.find((entry) => entry.id === containerId);
+    const nextTab = container?.state === "running" ? "running" : "stopped";
+
     if (containerId === selectedId) {
+      setActiveTab(nextTab);
       return;
     }
 
     shouldAutoScrollRef.current = true;
     setPinnedStoppedContainer(null);
+    setActiveTab(nextTab);
     setSelectedId(containerId);
   }
 
@@ -86,7 +95,8 @@ function App() {
     setPinnedStoppedContainer(null);
     setLogs([]);
     setStreamError("");
-    setSelectedId(containers[0]?.id ?? "");
+    setSelectedId(containers.find((container) => container.state === "running")?.id ?? containers[0]?.id ?? "");
+    setActiveTab("running");
 
     if (lastSelectedRunningContainerRef.current?.id === pinnedStoppedContainer.id) {
       lastSelectedRunningContainerRef.current = null;
@@ -98,10 +108,21 @@ function App() {
   }, [selectedId]);
 
   useEffect(() => {
-    if (selectedRunningContainer) {
-      lastSelectedRunningContainerRef.current = selectedRunningContainer;
+    if (selectedListedContainer?.state === "running") {
+      lastSelectedRunningContainerRef.current = selectedListedContainer;
     }
-  }, [selectedRunningContainer]);
+  }, [selectedListedContainer]);
+
+  useEffect(() => {
+    if (selectedListedContainer) {
+      setActiveTab(selectedListedContainer.state === "running" ? "running" : "stopped");
+      return;
+    }
+
+    if (selectedPinnedContainer) {
+      setActiveTab("stopped");
+    }
+  }, [selectedListedContainer, selectedPinnedContainer]);
 
   useEffect(() => {
     let disposed = false;
@@ -127,12 +148,16 @@ function App() {
         setLastUpdated(new Date().toISOString());
         setPinnedStoppedContainer((currentPinned) => {
           const currentSelectedId = selectedIdRef.current;
+          if (currentPinned?.id && nextContainers.some((container) => container.id === currentPinned.id)) {
+            return null;
+          }
+
           if (!currentSelectedId) {
             return currentPinned;
           }
 
           if (nextContainers.some((container) => container.id === currentSelectedId)) {
-            return currentPinned?.id === currentSelectedId ? null : currentPinned;
+            return currentPinned;
           }
 
           const lastRunningContainer = lastSelectedRunningContainerRef.current;
@@ -157,10 +182,10 @@ function App() {
           }
 
           if (nextContainers.length === 0) {
-            return "";
+            return current || "";
           }
 
-          return nextContainers[0].id;
+          return nextContainers.find((container) => container.state === "running")?.id ?? nextContainers[0].id;
         });
       } catch (error) {
         if (!disposed) {
@@ -186,26 +211,34 @@ function App() {
 
   useEffect(() => {
     if (!selectedId) {
+      activeLogContainerRef.current = "";
       setLogs([]);
       setStreamState("idle");
-      setStreamError(containers.length === 0 ? "No running containers found." : "");
+      setStreamError(containers.length === 0 ? "No containers found." : "");
       return;
     }
 
-    if (isSelectedPinned) {
+    if (!selectedContainer && isSelectedPinned) {
       setStreamState("stopped");
       setStreamError("");
       return;
     }
 
-    if (!isSelectedRunning) {
+    if (!selectedContainer) {
       return;
     }
 
     const source = new EventSource(`/api/containers/${selectedId}/logs?tail=${DEFAULT_TAIL}`);
     let isClosing = false;
-    shouldAutoScrollRef.current = true;
-    setLogs([]);
+    const isNewSelection = activeLogContainerRef.current !== selectedId;
+
+    activeLogContainerRef.current = selectedId;
+
+    if (isNewSelection) {
+      shouldAutoScrollRef.current = true;
+      setLogs([]);
+    }
+
     setStreamState("connecting");
     setStreamError("");
 
@@ -241,7 +274,12 @@ function App() {
     });
 
     source.addEventListener("stream-ended", () => {
-      preserveSelectedContainerAsStopped();
+      if (isSelectedRunning) {
+        preserveSelectedContainerAsStopped();
+      } else {
+        setStreamState("stopped");
+        setStreamError("");
+      }
       isClosing = true;
       source.close();
     });
@@ -259,7 +297,7 @@ function App() {
       isClosing = true;
       source.close();
     };
-  }, [containers.length === 0, isSelectedPinned, isSelectedRunning, selectedId]);
+  }, [containers.length === 0, isSelectedPinned, isSelectedRunning, selectedContainer?.state, selectedId]);
 
   useLayoutEffect(() => {
     const node = logViewportRef.current;
@@ -282,7 +320,7 @@ function App() {
         <div className="sidebar-header">
           <div>
             <p className="eyebrow">Docker Webview</p>
-            <h1>Running containers</h1>
+            <h1>Containers</h1>
           </div>
           <p className="meta">
             {lastUpdated ? `Updated ${formatDateTime(lastUpdated)}` : "Waiting for first refresh"}
@@ -301,13 +339,53 @@ function App() {
           />
         </label>
         {!containersLoading && !containersError && containers.length === 0 ? (
-          <p className="status-card">No running containers found.</p>
+          <p className="status-card">No containers found.</p>
         ) : null}
-        {!containersLoading && !containersError && containers.length > 0 && visibleContainers.length === 0 ? (
+        <div className="tab-strip" role="tablist" aria-label="Container state tabs">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "running"}
+            className={`tab-button${activeTab === "running" ? " active" : ""}`}
+            onClick={() => setActiveTab("running")}
+          >
+            Running
+            <span className="tab-count">{runningContainers.length}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "stopped"}
+            className={`tab-button${activeTab === "stopped" ? " active" : ""}`}
+            onClick={() => setActiveTab("stopped")}
+          >
+            Stopped
+            <span className="tab-count">{stoppedContainers.length + (pinnedStoppedContainer ? 1 : 0)}</span>
+          </button>
+        </div>
+
+        {!containersLoading &&
+        !containersError &&
+        containers.length > 0 &&
+        visibleContainers.length === 0 ? (
+          <p className="status-card">No containers match the current image filter.</p>
+        ) : null}
+        {!containersLoading &&
+        !containersError &&
+        visibleContainers.length > 0 &&
+        activeTab === "running" &&
+        runningContainers.length === 0 ? (
           <p className="status-card">No running containers match the current image filter.</p>
         ) : null}
+        {!containersLoading &&
+        !containersError &&
+        activeTab === "stopped" &&
+        stoppedContainers.length === 0 &&
+        !pinnedStoppedContainer ? (
+          <p className="status-card">No stopped containers match the current image filter.</p>
+        ) : null}
 
-        {pinnedStoppedContainer ? (
+        {activeTab === "stopped" && pinnedStoppedContainer ? (
           <div className="container-card selected stopped pinned-session">
             <div className="pinned-session-header">
               <div className="pinned-session-badges">
@@ -335,13 +413,14 @@ function App() {
         ) : null}
 
         <div className="container-list">
-          {visibleContainers.map((container) => {
+          {(activeTab === "running" ? runningContainers : stoppedContainers).map((container) => {
             const isSelected = container.id === selectedId;
+            const isStopped = container.state !== "running";
             return (
               <button
                 type="button"
                 key={container.id}
-                className={`container-card${isSelected ? " selected" : ""}`}
+                className={`container-card${isSelected ? " selected" : ""}${isStopped ? " stopped" : ""}`}
                 onClick={() => handleSelectContainer(container.id)}
               >
                 <div className="container-card-top">
@@ -375,9 +454,9 @@ function App() {
           <span>
             {streamState === "connecting" && "Connecting to container logs..."}
             {streamState === "streaming" && "Streaming recent backlog and live logs"}
-            {streamState === "stopped" && "Container stopped. Preserving the last received logs"}
+            {streamState === "stopped" && "Container is stopped. Showing saved logs"}
             {streamState === "error" && (streamError || "Unable to open log stream")}
-            {streamState === "idle" && "Select a running container to view logs"}
+            {streamState === "idle" && "Select a container to view logs"}
           </span>
         </div>
 

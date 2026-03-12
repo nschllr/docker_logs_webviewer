@@ -4,9 +4,10 @@ Local web UI for inspecting running Docker containers and tailing logs from the 
 
 ## Features
 
-- Lists currently running containers
+- Lists running and stopped containers, with running containers first
 - Filters the running list by image name substring
-- Streams a recent log backlog plus live updates for the selected container
+- Streams a recent log backlog plus live updates for running containers
+- Shows saved Docker logs for stopped containers, including containers opened after they already stopped
 - Preserves the last viewed logs when the selected container stops
 - Keeps the log pane scroll position unless you are already near the bottom
 
