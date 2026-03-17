@@ -61,9 +61,9 @@ async function handleContainerLogs(request, response, containerId) {
     const inspection = await inspectContainer(containerId);
     const isRunning = inspection.State?.Running === true;
 
-    const tail = Number(new URL(request.url, "http://localhost").searchParams.get("tail")) || 200;
+    const requestedTail = Number(new URL(request.url, "http://localhost").searchParams.get("tail")) || 200;
     const logResponse = await openContainerLogs(containerId, {
-      tail,
+      tail: isRunning ? requestedTail : "all",
       follow: isRunning,
       signal: controller.signal
     });

@@ -77,7 +77,8 @@ export async function inspectContainer(containerId) {
 }
 
 export async function openContainerLogs(containerId, { tail = 200, follow = true, signal } = {}) {
-  const tailValue = Number.isFinite(tail) ? Math.max(1, Math.min(5000, tail)) : 200;
+  const tailValue =
+    tail === "all" ? "all" : Number.isFinite(tail) ? Math.max(1, Math.min(5000, tail)) : 200;
   const path =
     `/containers/${encodeURIComponent(containerId)}/logs?stdout=1&stderr=1&follow=${follow ? 1 : 0}&tail=${tailValue}&timestamps=1`;
   const response = await dockerRequest(path, { signal });

@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 const REFRESH_INTERVAL_MS = 5000;
-const DEFAULT_TAIL = 200;
+const DEFAULT_TAIL = 1000;
+const RUNNING_LOG_LINE_LIMIT = 10000;
 const AUTO_SCROLL_THRESHOLD_PX = 40;
 
 function formatDateTime(value) {
@@ -259,8 +260,10 @@ function App() {
       const payload = JSON.parse(event.data);
       setLogs((current) => {
         const nextLogs = current.concat(payload);
-        if (nextLogs.length > 1000) {
-          return nextLogs.slice(nextLogs.length - 1000);
+
+        // Keep a bounded buffer for running containers, but keep full history once stopped.
+        if (isSelectedRunning && nextLogs.length > RUNNING_LOG_LINE_LIMIT) {
+          return nextLogs.slice(nextLogs.length - RUNNING_LOG_LINE_LIMIT);
         }
 
         return nextLogs;
