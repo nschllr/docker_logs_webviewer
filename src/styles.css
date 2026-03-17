@@ -212,6 +212,21 @@ h2 {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 8px;
+  min-width: 0;
+}
+
+.container-card-top strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.container-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .container-card p,

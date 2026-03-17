@@ -3,7 +3,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { inspectContainer, listContainers, openContainerLogs } from "./docker-api.mjs";
+import { inspectContainer, listContainers, openContainerLogs, removeContainer } from "./docker-api.mjs";
 import { createDockerLogDecoder, createLineEmitter } from "./log-stream.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -11,8 +11,17 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
 const distRoot = path.join(projectRoot, "dist");
 const publicRoot = path.join(projectRoot, "public");
+const configPath = path.join(projectRoot, "config.json");
 const serverHost = process.env.HOST || "127.0.0.1";
 const serverPort = Number(process.env.PORT || 3001);
+
+function loadConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(configPath, "utf8"));
+  } catch {
+    return {};
+  }
+}
 
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -174,6 +183,26 @@ const server = http.createServer(async (request, response) => {
   const logMatch = url.pathname.match(/^\/api\/containers\/([^/]+)\/logs$/);
   if (request.method === "GET" && logMatch) {
     await handleContainerLogs(request, response, decodeURIComponent(logMatch[1]));
+    return;
+  }
+
+  const containerMatch = url.pathname.match(/^\/api\/containers\/([^/]+)$/);
+  if (request.method === "DELETE" && containerMatch) {
+    const config = loadConfig();
+    if (config.deletePassword) {
+      const password = request.headers["x-delete-password"] || "";
+      if (password !== config.deletePassword) {
+        sendJson(response, 403, { message: "Incorrect password." });
+        return;
+      }
+    }
+
+    try {
+      await removeContainer(decodeURIComponent(containerMatch[1]));
+      sendJson(response, 200, { message: "Container removed." });
+    } catch (error) {
+      sendJson(response, 500, { message: "Failed to remove container.", detail: error.message });
+    }
     return;
   }
 
