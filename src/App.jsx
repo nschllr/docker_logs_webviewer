@@ -89,6 +89,33 @@ function App() {
     setSelectedId(containerId);
   }
 
+  async function handleDeleteContainer(containerId) {
+    const password = window.prompt("Enter password to delete container:");
+    if (password === null) return;
+
+    try {
+      const response = await fetch(`/api/containers/${containerId}`, {
+        method: "DELETE",
+        headers: { "x-delete-password": password }
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        window.alert(body.message || "Failed to delete container.");
+        return;
+      }
+
+      if (selectedId === containerId) {
+        setLogs([]);
+        setStreamError("");
+        setSelectedId("");
+      }
+
+      setContainers((current) => current.filter((c) => c.id !== containerId));
+    } catch (error) {
+      console.error("Failed to delete container:", error.message);
+    }
+  }
+
   function handleRemovePinnedContainer() {
     if (!pinnedStoppedContainer) {
       return;
@@ -429,19 +456,36 @@ function App() {
             const isSelected = container.id === selectedId;
             const isStopped = container.state !== "running";
             return (
-              <button
-                type="button"
+              <div
                 key={container.id}
                 className={`container-card${isSelected ? " selected" : ""}${isStopped ? " stopped" : ""}`}
                 onClick={() => handleSelectContainer(container.id)}
               >
                 <div className="container-card-top">
                   <strong>{container.name}</strong>
-                  <span className="pill">{container.shortId}</span>
+                  <div className="container-card-actions">
+                    {isStopped ? (
+                      <button
+                        type="button"
+                        className="icon-button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDeleteContainer(container.id);
+                        }}
+                        aria-label="Delete container"
+                        title="Delete container"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 7h2v8h-2v-8Zm4 0h2v8h-2v-8ZM7 10h2v8H7v-8Zm1 10h8a2 2 0 0 0 2-2V8H6v10a2 2 0 0 0 2 2Z" />
+                        </svg>
+                      </button>
+                    ) : null}
+                    <span className="pill">{container.shortId}</span>
+                  </div>
                 </div>
                 <p>{container.image}</p>
-                <small>{container.status}</small>
-              </button>
+                <small>{container.status}{isStopped && container.runtime ? ` · Ran for ${container.runtime}` : ""}</small>
+              </div>
             );
           })}
         </div>
