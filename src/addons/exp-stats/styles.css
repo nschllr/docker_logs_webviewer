@@ -243,6 +243,12 @@
   color: #ff6d7d;
 }
 
+.es-detail-match {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.76rem;
+  color: #8fb2de;
+}
+
 .es-conv-link {
   margin-left: auto;
   border: 1px solid rgba(115, 189, 255, 0.3);

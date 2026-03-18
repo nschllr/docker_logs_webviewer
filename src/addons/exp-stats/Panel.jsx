@@ -202,6 +202,10 @@ function Panel() {
                                   {run.verification?.ok ? "solved" : run.verification?.partial ? "partial" : "failed"}
                                 </span>
                                 <span>exit: {run.exit_code ?? "?"}</span>
+                                <span className="es-detail-match">
+                                  prefix: {run.verification?.ok ? 32 : run.verification?.partial?.prefix_bytes_matched ?? 0}/32
+                                  {" "}suffix: {run.verification?.ok ? 32 : run.verification?.partial?.suffix_bytes_matched ?? 0}/32
+                                </span>
                                 <button type="button" className="es-conv-link" onClick={(e) => { e.stopPropagation(); handleViewRun(run.run_id); }}>
                                   View conversation
                                 </button>
