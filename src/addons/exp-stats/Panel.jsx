@@ -198,7 +198,7 @@ function Panel() {
                             {expandedRunsForRow(row).map((run) => (
                               <div key={run.run_id} className="es-detail-run">
                                 <span className="es-detail-run-id">{run.run_id}</span>
-                                <span className={`es-detail-status ${run.verification?.ok ? "solved" : "failed"}`}>
+                                <span className={`es-detail-status ${run.verification?.ok ? "solved" : run.verification?.partial ? "partial" : "failed"}`}>
                                   {run.verification?.ok ? "solved" : run.verification?.partial ? "partial" : "failed"}
                                 </span>
                                 <span>exit: {run.exit_code ?? "?"}</span>
