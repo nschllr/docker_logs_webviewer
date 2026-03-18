@@ -1,4 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import ExpStatsPanel from "./addons/exp-stats/Panel.jsx";
+
+const ADDON_PANELS = { "exp-stats": ExpStatsPanel };
 
 const REFRESH_INTERVAL_MS = 5000;
 const DEFAULT_TAIL = 1000;
@@ -38,6 +41,12 @@ function App() {
   const lastSelectedRunningContainerRef = useRef(null);
   const shouldAutoScrollRef = useRef(true);
   const activeLogContainerRef = useRef("");
+  const [activePage, setActivePage] = useState("logs");
+  const [addons, setAddons] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/addons").then((r) => r.json()).then(setAddons).catch(() => {});
+  }, []);
 
   const normalizedFilter = filterText.trim().toLowerCase();
   const visibleContainers = containers.filter((container) =>
@@ -353,9 +362,35 @@ function App() {
     shouldAutoScrollRef.current = isNearBottom(event.currentTarget);
   }
 
+  const AddonPanel = activePage !== "logs" ? ADDON_PANELS[activePage] : null;
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
+        {addons.length > 0 && (
+          <div className="page-nav">
+            <button
+              type="button"
+              className={activePage === "logs" ? "active" : ""}
+              onClick={() => setActivePage("logs")}
+            >
+              Logs
+            </button>
+            {addons.map((addon) => (
+              <button
+                key={addon.name}
+                type="button"
+                className={activePage === addon.name ? "active" : ""}
+                onClick={() => setActivePage(addon.name)}
+              >
+                {addon.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {activePage === "logs" && (
+          <>
         <div className="sidebar-header">
           <div>
             <p className="eyebrow">Docker Webview</p>
@@ -489,8 +524,15 @@ function App() {
             );
           })}
         </div>
+          </>
+        )}
       </aside>
 
+      {AddonPanel ? (
+        <main className="main-panel">
+          <AddonPanel />
+        </main>
+      ) : (
       <main className="main-panel">
         <header className="main-header">
           <div>
@@ -534,6 +576,7 @@ function App() {
           )}
         </section>
       </main>
+      )}
     </div>
   );
 }

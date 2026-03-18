@@ -97,6 +97,37 @@ h2 {
   color: #ffd3d3;
 }
 
+.page-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(145, 170, 204, 0.16);
+}
+
+.page-nav button {
+  flex: 1;
+  border: 1px solid rgba(149, 173, 206, 0.18);
+  border-radius: 14px;
+  background: rgba(12, 22, 37, 0.72);
+  color: #b9cbe4;
+  padding: 11px 14px;
+  cursor: pointer;
+  font-size: 0.86rem;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.page-nav button:hover {
+  border-color: rgba(126, 176, 240, 0.4);
+  background: rgba(17, 31, 52, 0.92);
+}
+
+.page-nav button.active {
+  border-color: rgba(115, 189, 255, 0.72);
+  background: linear-gradient(180deg, rgba(22, 43, 71, 0.94), rgba(13, 26, 44, 0.96));
+  color: #e8edf6;
+}
+
 .filter-field {
   display: flex;
   flex-direction: column;

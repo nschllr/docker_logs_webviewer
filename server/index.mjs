@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { inspectContainer, listContainers, openContainerLogs, removeContainer } from "./docker-api.mjs";
 import { createDockerLogDecoder, createLineEmitter } from "./log-stream.mjs";
+import { getAddonManifests, routeAddonRequest } from "./addon-loader.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -204,6 +205,19 @@ const server = http.createServer(async (request, response) => {
       sendJson(response, 500, { message: "Failed to remove container.", detail: error.message });
     }
     return;
+  }
+
+  // Addon manifest list
+  if (request.method === "GET" && url.pathname === "/api/addons") {
+    sendJson(response, 200, getAddonManifests());
+    return;
+  }
+
+  // Addon API delegation
+  const addonMatch = url.pathname.match(/^\/api\/addons\/([^/]+)(\/.*)?$/);
+  if (addonMatch) {
+    const handled = await routeAddonRequest(request, response, addonMatch[1], addonMatch[2] || "/", url.searchParams);
+    if (handled) return;
   }
 
   if (request.method === "GET" && tryServeStatic(request, response)) {
