@@ -316,8 +316,9 @@ function RunDetail({ runId, data, onBack }) {
     );
   }
 
-  const stdout = data.stdout || "";
-  const lines = stdout.split("\n");
+  const isCodex = (data.model_id || "").toLowerCase().includes("codex") || (data.agent_profile?.agent_id === "codex");
+  const rawText = isCodex ? [data.stderr, data.stdout].filter(Boolean).join("\n") : (data.stdout || "");
+  const lines = rawText.split("\n");
 
   // Group consecutive lines of the same type into blocks for collapsibility
   const blocks = [];

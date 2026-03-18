@@ -83,6 +83,11 @@ async function handleContainerLogs(request, response, containerId) {
       data: { containerId, running: isRunning }
     });
 
+    // Codex writes its thinking/processing output to stderr; reclassify as
+    // stdout so it renders with the normal log style in the webviewer.
+    const containerName = inspection.Name || "";
+    const isCodex = /codex/i.test(containerName);
+
     const lineEmitter = createLineEmitter((line) => {
       writeSse(response, { event: "log", data: line });
     });
@@ -90,7 +95,7 @@ async function handleContainerLogs(request, response, containerId) {
     const decoder = createDockerLogDecoder({
       tty: Boolean(inspection.Config?.Tty),
       onFrame(stream, payload) {
-        lineEmitter.push(stream, payload);
+        lineEmitter.push(isCodex && stream === "stderr" ? "stdout" : stream, payload);
       }
     });
 
