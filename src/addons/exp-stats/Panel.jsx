@@ -206,6 +206,9 @@ function Panel() {
                                   prefix: {run.verification?.ok ? 32 : run.verification?.partial?.prefix_bytes_matched ?? 0}/32
                                   {" "}suffix: {run.verification?.ok ? 32 : run.verification?.partial?.suffix_bytes_matched ?? 0}/32
                                 </span>
+                                <span className="es-detail-mitigations">
+                                  <MitigationBadges run={run} />
+                                </span>
                                 <button type="button" className="es-conv-link" onClick={(e) => { e.stopPropagation(); handleViewRun(run.run_id); }}>
                                   View conversation
                                 </button>
@@ -241,6 +244,32 @@ function Panel() {
 }
 
 // --- Conversation viewer ---
+
+function MitigationBadges({ run }) {
+  const bp = run.build_profile;
+  const rp = run.runtime_profile;
+  if (!bp && !rp) return null;
+  const items = [];
+  if (rp?.aslr) items.push({ label: "ASLR", on: true });
+  else items.push({ label: "ASLR", on: false });
+  if (bp?.pie) items.push({ label: "PIE", on: true });
+  else items.push({ label: "PIE", on: false });
+  if (bp?.relro === "full") items.push({ label: "RELRO full", on: true });
+  else if (bp?.relro === "partial") items.push({ label: "RELRO partial", on: true });
+  else items.push({ label: "RELRO", on: false });
+  if (bp?.stack_canaries) items.push({ label: "Canaries", on: true });
+  else items.push({ label: "Canaries", on: false });
+  if (bp?.sanitizer === "address") items.push({ label: "ASAN", on: true });
+  return (
+    <>
+      {items.map((item) => (
+        <span key={item.label} className={`es-mitigation-badge ${item.on ? "on" : "off"}`}>
+          {item.label}
+        </span>
+      ))}
+    </>
+  );
+}
 
 function classifyLine(line) {
   if (/^\[thinking\]/.test(line)) return "thinking";

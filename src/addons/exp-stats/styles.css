@@ -249,6 +249,35 @@
   color: #8fb2de;
 }
 
+.es-detail-mitigations {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.es-mitigation-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 0.68rem;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  letter-spacing: 0.04em;
+}
+
+.es-mitigation-badge.on {
+  background: rgba(255, 157, 87, 0.16);
+  color: #ffc882;
+  border: 1px solid rgba(255, 157, 87, 0.3);
+}
+
+.es-mitigation-badge.off {
+  background: rgba(98, 116, 141, 0.12);
+  color: #7f98bc;
+  border: 1px solid rgba(98, 116, 141, 0.18);
+}
+
 .es-conv-link {
   margin-left: auto;
   border: 1px solid rgba(115, 189, 255, 0.3);
