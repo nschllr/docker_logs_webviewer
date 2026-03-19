@@ -8,8 +8,8 @@ function Panel() {
   const [results, setResults] = useState(null);
   const [bugFilter, setBugFilter] = useState("");
   const [modelFilter, setModelFilter] = useState("");
-  const [sortCol, setSortCol] = useState(null);
-  const [sortAsc, setSortAsc] = useState(true);
+  const [sortCol, setSortCol] = useState("latest_run_id");
+  const [sortAsc, setSortAsc] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
   const [viewingRun, setViewingRun] = useState(null);
   const [runData, setRunData] = useState(null);
@@ -103,6 +103,7 @@ function Panel() {
 
   const columns = [
     { key: "bug_id", label: "Bug ID" },
+    { key: "fuzz_target", label: "Target" },
     { key: "model_id", label: "Model" },
     { key: "runs", label: "Runs" },
     { key: "solved", label: "Solved" },
@@ -183,6 +184,7 @@ function Panel() {
                       onClick={() => setExpandedRow(isExpanded ? null : key)}
                     >
                       <td>{row.bug_id}</td>
+                      <td>{row.fuzz_target}</td>
                       <td>{row.model_id}</td>
                       <td>{row.runs}</td>
                       <td>{row.solved}</td>
@@ -229,6 +231,7 @@ function Panel() {
                   <tr className="es-total-row">
                     <td>TOTAL</td>
                     <td></td>
+                    <td></td>
                     <td>{totals.runs}</td>
                     <td>{totals.solved}</td>
                     <td>{totals.partial}</td>
@@ -261,22 +264,25 @@ function formatRuntime(seconds) {
 function MitigationBadges({ run }) {
   const bp = run.build_profile;
   const rp = run.runtime_profile;
+  const vp = run.visibility_profile;
   if (!bp && !rp) return null;
+  // "on"=active mitigation (harder), "off"=inactive, "assist"=aids the exploiter
   const items = [];
-  if (rp?.aslr) items.push({ label: "ASLR", on: true });
-  else items.push({ label: "ASLR", on: false });
-  if (bp?.pie) items.push({ label: "PIE", on: true });
-  else items.push({ label: "PIE", on: false });
-  if (bp?.relro === "full") items.push({ label: "RELRO full", on: true });
-  else if (bp?.relro === "partial") items.push({ label: "RELRO partial", on: true });
-  else items.push({ label: "RELRO", on: false });
-  if (bp?.stack_canaries) items.push({ label: "Canaries", on: true });
-  else items.push({ label: "Canaries", on: false });
-  if (bp?.sanitizer === "address") items.push({ label: "ASAN", on: true });
+  if (rp?.aslr) items.push({ label: "ASLR", kind: "on" });
+  else items.push({ label: "ASLR", kind: "off" });
+  if (bp?.pie) items.push({ label: "PIE", kind: "on" });
+  else items.push({ label: "PIE", kind: "off" });
+  if (bp?.relro === "full") items.push({ label: "RELRO full", kind: "on" });
+  else if (bp?.relro === "partial") items.push({ label: "RELRO partial", kind: "on" });
+  else items.push({ label: "RELRO", kind: "off" });
+  if (bp?.stack_canaries) items.push({ label: "Canaries", kind: "on" });
+  else items.push({ label: "Canaries", kind: "off" });
+  if (bp?.sanitizer === "address") items.push({ label: "ASAN", kind: "assist" });
+  if (vp?.provide_sources) items.push({ label: "src", kind: "assist" });
   return (
     <>
       {items.map((item) => (
-        <span key={item.label} className={`es-mitigation-badge ${item.on ? "on" : "off"}`}>
+        <span key={item.label} className={`es-mitigation-badge ${item.kind}`}>
           {item.label}
         </span>
       ))}

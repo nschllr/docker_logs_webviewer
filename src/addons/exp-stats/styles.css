@@ -284,6 +284,12 @@
   border: 1px solid rgba(98, 116, 141, 0.18);
 }
 
+.es-mitigation-badge.assist {
+  background: rgba(48, 196, 141, 0.14);
+  color: #5edca8;
+  border: 1px solid rgba(48, 196, 141, 0.3);
+}
+
 .es-conv-link {
   margin-left: auto;
   border: 1px solid rgba(115, 189, 255, 0.3);

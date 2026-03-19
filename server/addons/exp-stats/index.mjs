@@ -77,15 +77,19 @@ export function computeStats(results, { bugId, modelId } = {}) {
     if (bugId && bid !== bugId) continue;
     if (modelId && mid !== modelId) continue;
     const key = `${bid}\0${mid}`;
-    if (!groups.has(key)) groups.set(key, { bid, mid, entries: [] });
-    groups.get(key).entries.push(r);
+    if (!groups.has(key)) groups.set(key, { bid, mid, entries: [], fuzzTarget: null, latestRunId: null });
+    const g = groups.get(key);
+    g.entries.push(r);
+    if (!g.fuzzTarget && r.fuzz_target) g.fuzzTarget = r.fuzz_target;
+    // run_id contains a timestamp segment; later sorted ids = more recent runs
+    if (!g.latestRunId || (r.run_id && r.run_id > g.latestRunId)) g.latestRunId = r.run_id;
   }
 
   const rows = [];
   const sortedKeys = Array.from(groups.keys()).sort();
 
   for (const key of sortedKeys) {
-    const { bid, mid, entries } = groups.get(key);
+    const { bid, mid, entries, fuzzTarget, latestRunId } = groups.get(key);
     let solved = 0, partial = 0, failed = 0;
     let bestPrefix = 0, bestSuffix = 0;
     let prefixSum = 0, suffixSum = 0;
@@ -117,6 +121,8 @@ export function computeStats(results, { bugId, modelId } = {}) {
     rows.push({
       bug_id: bid,
       model_id: mid,
+      fuzz_target: fuzzTarget || "-",
+      latest_run_id: latestRunId || "",
       runs: entries.length,
       solved,
       partial,
