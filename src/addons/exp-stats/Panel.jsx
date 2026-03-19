@@ -206,6 +206,9 @@ function Panel() {
                                   prefix: {run.verification?.ok ? 32 : run.verification?.partial?.prefix_bytes_matched ?? 0}/32
                                   {" "}suffix: {run.verification?.ok ? 32 : run.verification?.partial?.suffix_bytes_matched ?? 0}/32
                                 </span>
+                                {run.elapsed_seconds != null && (
+                                  <span className="es-detail-runtime">{formatRuntime(run.elapsed_seconds)}</span>
+                                )}
                                 <span className="es-detail-mitigations">
                                   <MitigationBadges run={run} />
                                 </span>
@@ -244,6 +247,16 @@ function Panel() {
 }
 
 // --- Conversation viewer ---
+
+function formatRuntime(seconds) {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  if (m < 60) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
+}
 
 function MitigationBadges({ run }) {
   const bp = run.build_profile;

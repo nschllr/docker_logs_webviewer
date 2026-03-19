@@ -249,6 +249,12 @@
   color: #8fb2de;
 }
 
+.es-detail-runtime {
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.76rem;
+  color: #a6bad6;
+}
+
 .es-detail-mitigations {
   display: inline-flex;
   gap: 4px;
